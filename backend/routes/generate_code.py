@@ -2,6 +2,7 @@ import os
 import traceback
 from fastapi import APIRouter, WebSocket
 import openai
+from codegen.utils import extract_html_content
 from config import ANTHROPIC_API_KEY, IS_PROD, SHOULD_MOCK_AI_RESPONSE
 from custom_types import InputMode
 from llm import (
@@ -20,6 +21,7 @@ from datetime import datetime
 import json
 from prompts.claude_prompts import VIDEO_PROMPT
 from prompts.types import Stack
+from utils import pprint_prompt
 
 # from utils import pprint_prompt
 from video.utils import extract_tag_content, assemble_claude_prompt_video
@@ -166,7 +168,7 @@ async def stream_code(websocket: WebSocket):
     if params.get("isImportedFromCode") and params["isImportedFromCode"]:
         original_imported_code = params["history"][0]
         prompt_messages = assemble_imported_code_prompt(
-            original_imported_code, valid_stack
+            original_imported_code, valid_stack, code_generation_model
         )
         for index, text in enumerate(params["history"][1:]):
             if index % 2 == 0:
@@ -245,7 +247,10 @@ async def stream_code(websocket: WebSocket):
                     include_thinking=True,
                 )
                 exact_llm_version = Llm.CLAUDE_3_OPUS
-            elif code_generation_model == Llm.CLAUDE_3_SONNET:
+            elif (
+                code_generation_model == Llm.CLAUDE_3_SONNET
+                or code_generation_model == Llm.CLAUDE_3_5_SONNET_2024_06_20
+            ):
                 if not anthropic_api_key:
                     await throw_error(
                         "No Anthropic API key found. Please add the environment variable ANTHROPIC_API_KEY to backend/.env or in the settings dialog"
@@ -256,6 +261,7 @@ async def stream_code(websocket: WebSocket):
                     prompt_messages,  # type: ignore
                     api_key=anthropic_api_key,
                     callback=lambda x: process_chunk(x),
+                    model=code_generation_model,
                 )
                 exact_llm_version = code_generation_model
             else:
@@ -306,6 +312,9 @@ async def stream_code(websocket: WebSocket):
         completion = extract_tag_content("html", completion)
 
     print("Exact used model for generation: ", exact_llm_version)
+
+    # Strip the completion of everything except the HTML content
+    completion = extract_html_content(completion)
 
     # Write the messages dict into a log so that we can debug later
     write_logs(prompt_messages, completion)  # type: ignore

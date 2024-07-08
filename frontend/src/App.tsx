@@ -68,7 +68,7 @@ function App() {
       isImageGenerationEnabled: true,
       editorTheme: EditorTheme.COBALT,
       generatedCodeConfig: Stack.HTML_TAILWIND,
-      codeGenerationModel: CodeGenerationModel.GPT_4O_2024_05_13,
+      codeGenerationModel: CodeGenerationModel.CLAUDE_3_5_SONNET_2024_06_20,
       // Only relevant for hosted version
       isTermOfServiceAccepted: false,
     },
@@ -94,13 +94,18 @@ function App() {
       CodeGenerationModel.GPT_4_TURBO_2024_04_09 &&
     settings.generatedCodeConfig === Stack.REACT_TAILWIND;
 
-  const showGpt4OMessage =
+  const showBetterModelMessage =
     selectedCodeGenerationModel !== CodeGenerationModel.GPT_4O_2024_05_13 &&
+    selectedCodeGenerationModel !==
+      CodeGenerationModel.CLAUDE_3_5_SONNET_2024_06_20 &&
     appState === AppState.INITIAL;
 
   const showSelectAndEditFeature =
-    selectedCodeGenerationModel === CodeGenerationModel.GPT_4O_2024_05_13 &&
-    settings.generatedCodeConfig === Stack.HTML_TAILWIND;
+    (selectedCodeGenerationModel === CodeGenerationModel.GPT_4O_2024_05_13 ||
+      selectedCodeGenerationModel ===
+        CodeGenerationModel.CLAUDE_3_5_SONNET_2024_06_20) &&
+    (settings.generatedCodeConfig === Stack.HTML_TAILWIND ||
+      settings.generatedCodeConfig === Stack.HTML_CSS);
 
   // Indicate coding state using the browser tab's favicon and title
   useBrowserTabIndicator(appState === AppState.CODING);
@@ -294,6 +299,11 @@ function App() {
     updateInstruction: string,
     selectedElement?: HTMLElement
   ) {
+    if (updateInstruction.trim() === "") {
+      toast.error("Please include some instructions for AI on what to update.");
+      return;
+    }
+
     if (currentVersion === null) {
       toast.error(
         "No current version set. Contact support or open a Github issue."
@@ -432,11 +442,11 @@ function App() {
             </div>
           )}
 
-          {showGpt4OMessage && (
+          {showBetterModelMessage && (
             <div className="rounded-lg p-2 bg-fuchsia-200">
               <p className="text-gray-800 text-sm">
-                Now supporting GPT-4o. Higher quality and 2x faster. Give it a
-                try!
+                Now supporting GPT-4o and Claude Sonnet 3.5. Higher quality and
+                2x faster. Give it a try!
               </p>
             </div>
           )}
